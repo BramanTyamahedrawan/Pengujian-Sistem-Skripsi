@@ -47,6 +47,7 @@ generate_question() {
     )
     echo "${questions[$((RANDOM % ${#questions[@]}))]}"
 }
+
 # Generate reference data first (smaller scale)
 echo "📝 Generating reference data..."
 
@@ -91,17 +92,17 @@ for i in {1..15}; do
         "$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")" >> "taksonomi_${SCALE}.csv"
 done
 
-echo "📝 Generating $SCALE soalUjian records..."
+echo "📝 Generating $SCALE soalujian records..."
 
 # PHASE 1: Data Generation Performance Test
 START_TIME=$(date +%s%3N)
 
-# Generate PostgreSQL soalUjian data
+# Generate PostgreSQL soalujian data
 > "soal_psql_${SCALE}.csv"
 for ((i=1; i<=SCALE; i++)); do
     SOAL_ID=$(generate_uuid)
     QUESTION=$(generate_question)
-    OPTIONS='{"A":"Option A - Pilihan pertama","B":"Option B - Pilihan kedua","C":"Option C - Pilihan ketiga","D":"Option D - Pilihan keempat","E":"Option E - Pilihan keli>
+    OPTIONS='{"A":"Option A - Pilihan pertama","B":"Option B - Pilihan kedua","C":"Option C - Pilihan ketiga","D":"Option D - Pilihan keempat","E":"Option E - Pilihan kelima"}'
     ANSWER='["A"]'
     RANDOM_TAKSONOMI="${TAKSONOMI_IDS[$((RANDOM % ${#TAKSONOMI_IDS[@]}))]}"
     RANDOM_KONSENTRASI="${KONSENTRASI_IDS[$((RANDOM % ${#KONSENTRASI_IDS[@]}))]}"
@@ -137,7 +138,6 @@ PSQL_THROUGHPUT=$((SCALE * 1000 / PSQL_GEN_DURATION))
 echo "$TIMESTAMP,$SCALE,1,data_generation,postgresql,$PSQL_GEN_DURATION,$SCALE,$PSQL_THROUGHPUT,csv_with_foreign_keys" >> $RESULTS_FILE
 echo "✅ PostgreSQL data generation: ${PSQL_GEN_DURATION}ms ($PSQL_THROUGHPUT rps)"
 
-
 # Generate HBase soalUjian data
 START_TIME=$(date +%s%3N)
 
@@ -145,7 +145,7 @@ START_TIME=$(date +%s%3N)
 for ((i=1; i<=SCALE; i++)); do
     SOAL_ID=$(generate_uuid)
     QUESTION=$(generate_question)
-    OPTIONS='{"A":"Option A - Pilihan pertama","B":"Option B - Pilihan kedua","C":"Option C - Pilihan ketiga","D":"Option D - Pilihan keempat","E":"Option E - Pilihan keli>
+    OPTIONS='{"A":"Option A - Pilihan pertama","B":"Option B - Pilihan kedua","C":"Option C - Pilihan ketiga","D":"Option D - Pilihan keempat","E":"Option E - Pilihan kelima"}'
     ANSWER='["A"]'
     RANDOM_TAKSONOMI="${TAKSONOMI_IDS[$((RANDOM % ${#TAKSONOMI_IDS[@]}))]}"
     RANDOM_KONSENTRASI="${KONSENTRASI_IDS[$((RANDOM % ${#KONSENTRASI_IDS[@]}))]}"
@@ -187,4 +187,3 @@ echo "✅ HBase data generation: ${HBASE_GEN_DURATION}ms ($HBASE_THROUGHPUT rps)
 
 echo "✅ Test data for scale $SCALE generated successfully!"
 echo "📊 PostgreSQL: ${PSQL_GEN_DURATION}ms, HBase: ${HBASE_GEN_DURATION}ms"
-

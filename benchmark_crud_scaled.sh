@@ -35,9 +35,8 @@ generate_uuid() {
 echo "📝 PHASE 3: CRUD Operations"
 
 # Get existing foreign key values for PostgreSQL
-EXISTING_TAKSONOMI=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idTaksonomi FROM taksonomi ORDER BY RANDOM() LIMIT 1;" 2>/dev/null | tr -d ' ')
-EXISTING_KONSENTRASI=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idKonsentrasiSekolah FROM konsentrasiKeahlianSekolah ORDER BY RANDOM() LIMIT 1;" > T 1;" 2>/dev/null | tr -d ' ')
-
+EXISTING_TAKSONOMI=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idtaksonomi FROM taksonomi ORDER BY RANDOM() LIMIT 1;" 2>/dev/null | tr -d ' ')
+EXISTING_KONSENTRASI=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idkonsentrasisekolah FROM konsentrasikeahliansekolah ORDER BY RANDOM() LIMIT 1;" 2>/dev/null | tr -d ' ')
 
 echo "🔍 PostgreSQL CRUD Tests:"
 
@@ -48,9 +47,9 @@ TEST_QUESTION="Test CRUD question for scale $SCALE"
 START_TIME=$(date +%s%3N)
 
 psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
-INSERT INTO soalUjian (
-    idSoalUjian, namaUjian, pertanyaan, jenisSoal, bobot,
-    jawabanBenar, opsi, idTaksonomi, idKonsentrasiSekolah, createdBy
+INSERT INTO soalujian (
+    idsoalujian, namaujian, pertanyaan, jenissoal, bobot,
+    jawabanbenar, opsi, idtaksonomi, idkonsentrasisekolah, createdby
 ) VALUES (
     '$TEST_ID', 'CRUD Test $SCALE', '$TEST_QUESTION', 'PG', 5,
     '[\"A\"]'::jsonb, '{\"A\":\"Option A\"}'::jsonb,
@@ -68,11 +67,11 @@ echo "  READ (SELECT) test..."
 START_TIME=$(date +%s%3N)
 
 psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
-SELECT s.*, t.namaTaksonomi, k.namaKonsentrasi
-FROM soalUjian s
-JOIN taksonomi t ON s.idTaksonomi = t.idTaksonomi
-JOIN konsentrasiKeahlianSekolah k ON s.idKonsentrasiSekolah = k.idKonsentrasiSekolah
-WHERE s.idSoalUjian = '$TEST_ID';" > /tmp/psql_crud_read.txt 2>/dev/null
+SELECT s.*, t.namataksonomi, k.namakonsentrasi
+FROM soalujian s
+JOIN taksonomi t ON s.idtaksonomi = t.idtaksonomi
+JOIN konsentrasikeahliansekolah k ON s.idkonsentrasisekolah = k.idkonsentrasisekolah
+WHERE s.idsoalujian = '$TEST_ID';" > /tmp/psql_crud_read.txt 2>/dev/null
 
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))
@@ -85,9 +84,9 @@ echo "  UPDATE test..."
 START_TIME=$(date +%s%3N)
 
 psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
-UPDATE soalUjian
+UPDATE soalujian
 SET pertanyaan = 'Updated: $TEST_QUESTION', bobot = 10
-WHERE idSoalUjian = '$TEST_ID';" > /dev/null 2>&1
+WHERE idsoalujian = '$TEST_ID';" > /dev/null 2>&1
 
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))
@@ -100,7 +99,7 @@ echo "  DELETE test..."
 START_TIME=$(date +%s%3N)
 
 psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
-DELETE FROM soalUjian WHERE idSoalUjian = '$TEST_ID';" > /dev/null 2>&1
+DELETE FROM soalujian WHERE idsoalujian = '$TEST_ID';" > /dev/null 2>&1
 
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))

@@ -17,60 +17,64 @@ export PGPASSWORD="mydreamonpsdkulumajang007"
 HBASE_TABLE="soalUjian"
 
 # Create benchmark results files
+# Set RESULTS_FILE variable properly
+RESULTS_FILE="${BENCHMARK_RESULTS_FILE:-$(pwd)/benchmark-results/benchmark_results_scaled.csv}"
+
+# Create benchmark results files
+mkdir -p "$(dirname "$RESULTS_FILE")"
 echo "timestamp,scale,phase,operation,database,duration_ms,records_affected,throughput_rps,notes" > "$RESULTS_FILE"
 
 # Setup PostgreSQL schema (dengan struktur yang benar seperti script asli)
 echo "🔧 Setting up PostgreSQL schema..."
 psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME << 'EOSQL'
 -- Drop existing tables
-DROP TABLE IF EXISTS soalUjian CASCADE;
+DROP TABLE IF EXISTS soalujian CASCADE;
 DROP TABLE IF EXISTS taksonomi CASCADE;
-DROP TABLE IF EXISTS konsentrasiKeahlianSekolah CASCADE;
+DROP TABLE IF EXISTS konsentrasikeahliansekolah CASCADE;
 DROP TABLE IF EXISTS schools CASCADE;
 
--- Create proper schema like your original script
 CREATE TABLE schools (
-    idSchool VARCHAR(255) PRIMARY KEY,
-    namaSekolah TEXT NOT NULL,
+    idschool VARCHAR(255) PRIMARY KEY,
+    namasekolah TEXT NOT NULL,
     alamat TEXT,
-    createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    createdat TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE konsentrasiKeahlianSekolah (
-    idKonsentrasiSekolah VARCHAR(255) PRIMARY KEY,
-    namaKonsentrasi TEXT NOT NULL,
-    idSchool VARCHAR(255) REFERENCES schools(idSchool),
-    createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+CREATE TABLE konsentrasikeahliansekolah (
+    idkonsentrasisekolah VARCHAR(255) PRIMARY KEY,
+    namakonsentrasi TEXT NOT NULL,
+    idschool VARCHAR(255) REFERENCES schools(idschool),
+    createdat TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE taksonomi (
-    idTaksonomi VARCHAR(255) PRIMARY KEY,
-    namaTaksonomi TEXT NOT NULL,
-    levelTaksonomi INTEGER DEFAULT 1,
-    parentId VARCHAR(255),
-    createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    idtaksonomi VARCHAR(255) PRIMARY KEY,
+    namataksonomi TEXT NOT NULL,
+    leveltaksonomi INTEGER DEFAULT 1,
+    parentid VARCHAR(255),
+    createdat TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE soalUjian (
-    idSoalUjian VARCHAR(255) PRIMARY KEY,
-    namaUjian TEXT,
+CREATE TABLE soalujian (
+    idsoalujian VARCHAR(255) PRIMARY KEY,
+    namaujian TEXT,
     pertanyaan TEXT,
-    jenisSoal VARCHAR(50) DEFAULT 'PG',
+    jenissoal VARCHAR(50) DEFAULT 'PG',
     bobot INTEGER DEFAULT 1,
-    jawabanBenar JSONB,
+    jawabanbenar JSONB,
     opsi JSONB,
-    idTaksonomi VARCHAR(255) REFERENCES taksonomi(idTaksonomi),
-    idKonsentrasiSekolah VARCHAR(255) REFERENCES konsentrasiKeahlianSekolah(idKonsentrasiSekolah),
-    createdAt TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    createdBy TEXT DEFAULT 'BramMahendrawan'
+    idtaksonomi VARCHAR(255) REFERENCES taksonomi(idtaksonomi),
+    idkonsentrasisekolah VARCHAR(255) REFERENCES konsentrasikeahliansekolah(idkonsentrasisekolah),
+    createdat TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    createdby TEXT DEFAULT 'BramMahendrawan'
 );
 
 -- Create proper indexes
-CREATE INDEX idx_soal_taksonomi ON soalUjian(idTaksonomi);
-CREATE INDEX idx_soal_konsentrasi ON soalUjian(idKonsentrasiSekolah);
-CREATE INDEX idx_soal_jenis ON soalUjian(jenisSoal);
-CREATE INDEX idx_soal_bobot ON soalUjian(bobot);
-CREATE INDEX idx_konsentrasi_school ON konsentrasiKeahlianSekolah(idSchool);
+CREATE INDEX idx_soal_taksonomi ON soalujian(idtaksonomi);
+CREATE INDEX idx_soal_konsentrasi ON soalujian(idkonsentrasisekolah);
+CREATE INDEX idx_soal_jenis ON soalujian(jenissoal);
+CREATE INDEX idx_soal_bobot ON soalujian(bobot);
+CREATE INDEX idx_konsentrasi_school ON konsentrasikeahliansekolah(idschool);
 EOSQL
 
 # Setup HBase schema (dengan struktur yang benar)

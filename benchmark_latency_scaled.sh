@@ -37,11 +37,11 @@ TOTAL_DURATION=0
 OPERATIONS=10
 
 for i in $(seq 1 $OPERATIONS); do
-    SAMPLE_ID=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idSoalUjian FROM soalUjian ORDER BY RANDOM() LIMIT 1;" 2>/dev/null | tr -d ' ')
+    SAMPLE_ID=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idsoalujian FROM soalujian ORDER BY RANDOM() LIMIT 1;" 2>/dev/null | tr -d ' ')
 
     if [ -n "$SAMPLE_ID" ]; then
         START_TIME=$(date +%s%3N)
-        psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT * FROM soalUjian WHERE idSoalUjian = '$SAMPLE_ID';" > /dev/null 2>&1
+        psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT * FROM soalujian WHERE idsoalujian = '$SAMPLE_ID';" > /dev/null 2>&1
         END_TIME=$(date +%s%3N)
         DURATION=$((END_TIME - START_TIME))
         TOTAL_DURATION=$((TOTAL_DURATION + DURATION))
@@ -62,17 +62,17 @@ echo "  JOIN query latency (10 operations)..."
 TOTAL_DURATION=0
 
 for i in $(seq 1 $OPERATIONS); do
-    SAMPLE_ID=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idSoalUjian FROM soalUjian ORDER BY RANDOM() LIMIT 1;" 2>/dev/null | tr -d ' ')
+    SAMPLE_ID=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idsoalujian FROM soalujian ORDER BY RANDOM() LIMIT 1;" 2>/dev/null | tr -d ' ')
 
     if [ -n "$SAMPLE_ID" ]; then
         START_TIME=$(date +%s%3N)
         psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
-        SELECT s.*, t.namaTaksonomi, k.namaKonsentrasi, sch.namaSekolah
-        FROM soalUjian s
-        JOIN taksonomi t ON s.idTaksonomi = t.idTaksonomi
-        JOIN konsentrasiKeahlianSekolah k ON s.idKonsentrasiSekolah = k.idKonsentrasiSekolah
-        JOIN schools sch ON k.idSchool = sch.idSchool
-        WHERE s.idSoalUjian = '$SAMPLE_ID';" > /dev/null 2>&1
+        SELECT s.*, t.namataksonomi, k.namakonsentrasi, sch.namasekolah
+        FROM soalujian s
+        JOIN taksonomi t ON s.idtaksonomi = t.idtaksonomi
+        JOIN konsentrasikeahliansekolah k ON s.idkonsentrasisekolah = k.idkonsentrasisekolah
+        JOIN schools sch ON k.idschool = sch.idschool
+        WHERE s.idsoalujian = '$SAMPLE_ID';" > /dev/null 2>&1
         END_TIME=$(date +%s%3N)
         DURATION=$((END_TIME - START_TIME))
         TOTAL_DURATION=$((TOTAL_DURATION + DURATION))
@@ -95,8 +95,8 @@ TOTAL_DURATION=0
 for i in $(seq 1 $OPERATIONS); do
     START_TIME=$(date +%s%3N)
     psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
-    SELECT COUNT(*) FROM soalUjian
-    WHERE jawabanBenar->0 = '\"A\"' AND opsi->'A' IS NOT NULL;" > /dev/null 2>&1
+    SELECT COUNT(*) FROM soalujian
+    WHERE jawabanbenar->0 = '\"A\"' AND opsi->'A' IS NOT NULL;" > /dev/null 2>&1
     END_TIME=$(date +%s%3N)
     DURATION=$((END_TIME - START_TIME))
     TOTAL_DURATION=$((TOTAL_DURATION + DURATION))

@@ -32,8 +32,8 @@ generate_uuid() {
 }
 
 # Get existing foreign key values
-EXISTING_TAKSONOMI=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idTaksonomi FROM taksonomi ORDER BY RANDOM() LIMIT 1;" 2>/dev/null | tr -d ' ')
-EXISTING_KONSENTRASI=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idKonsentrasiSekolah FROM konsentrasiKeahlianSekolah ORDER BY RANDOM() LIMIT 1;" >
+EXISTING_TAKSONOMI=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idtaksonomi FROM taksonomi ORDER BY RANDOM() LIMIT 1;" 2>/dev/null | tr -d ' ')
+EXISTING_KONSENTRASI=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idkonsentrasisekolah FROM konsentrasikeahliansekolah ORDER BY RANDOM() LIMIT 1;" 2>/dev/null | tr -d ' ')
 
 # PHASE 5: Throughput Testing
 echo "📈 PHASE 5: Throughput Testing"
@@ -65,7 +65,7 @@ START_TIME=$(date +%s%3N)
 BULK_SQL="BEGIN;"
 for i in $(seq 1 $BATCH_SIZE); do
     UUID=$(generate_uuid)
-    BULK_SQL="$BULK_SQL INSERT INTO soalUjian (idSoalUjian, namaUjian, pertanyaan, jenisSoal, bobot, jawabanBenar, opsi, idTaksonomi, idKonsentrasiSekolah, createdBy) VALU>
+    BULK_SQL="$BULK_SQL INSERT INTO soalujian (idsoalujian, namaujian, pertanyaan, jenissoal, bobot, jawabanbenar, opsi, idtaksonomi, idkonsentrasisekolah, createdby) VALUES ('$UUID', 'Bulk Test $i', 'Bulk question $i for scale $SCALE', 'PG', 5, '[\"A\"]'::jsonb, '{\"A\":\"Option A\"}'::jsonb, '$EXISTING_TAKSONOMI', '$EXISTING_KONSENTRASI', 'ThroughputTester');"
 done
 BULK_SQL="$BULK_SQL COMMIT;"
 
@@ -82,10 +82,10 @@ echo "  Bulk UPDATE throughput..."
 START_TIME=$(date +%s%3N)
 
 psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
-UPDATE soalUjian
+UPDATE soalujian
 SET bobot = bobot + 1,
     pertanyaan = CONCAT(pertanyaan, ' - Updated for throughput test')
-WHERE createdBy = 'ThroughputTester';" > /dev/null 2>&1
+WHERE createdby = 'ThroughputTester';" > /dev/null 2>&1
 
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))
@@ -98,12 +98,12 @@ echo "  Bulk SELECT with JOIN throughput..."
 START_TIME=$(date +%s%3N)
 
 psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
-SELECT s.idSoalUjian, s.namaUjian, s.pertanyaan, t.namaTaksonomi, k.namaKonsentrasi, sch.namaSekolah
-FROM soalUjian s
-JOIN taksonomi t ON s.idTaksonomi = t.idTaksonomi
-JOIN konsentrasiKeahlianSekolah k ON s.idKonsentrasiSekolah = k.idKonsentrasiSekolah
-JOIN schools sch ON k.idSchool = sch.idSchool
-WHERE s.createdBy = 'ThroughputTester';" > /tmp/bulk_select_result.txt 2>/dev/null
+SELECT s.idsoalujian, s.namaujian, s.pertanyaan, t.namataksonomi, k.namakonsentrasi, sch.namasekolah
+FROM soalujian s
+JOIN taksonomi t ON s.idtaksonomi = t.idtaksonomi
+JOIN konsentrasikeahliansekolah k ON s.idkonsentrasisekolah = k.idkonsentrasisekolah
+JOIN schools sch ON k.idschool = sch.idschool
+WHERE s.createdby = 'ThroughputTester';" > /tmp/bulk_select_result.txt 2>/dev/null
 
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))
@@ -116,7 +116,7 @@ echo "  Bulk DELETE throughput..."
 START_TIME=$(date +%s%3N)
 
 psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
-DELETE FROM soalUjian WHERE createdBy = 'ThroughputTester';" > /dev/null 2>&1
+DELETE FROM soalujian WHERE createdby = 'ThroughputTester';" > /dev/null 2>&1
 
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))

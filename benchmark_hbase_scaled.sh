@@ -72,8 +72,13 @@ DURATION=$((END_TIME - START_TIME))
 # Hitung jumlah baris hasil scan berdasarkan baris yang diawali 'ROW'
 SCAN_COUNT=$(grep -E '^\s*ROW\s*' /tmp/hbase_scan_output.txt | wc -l | tr -d ' ')
 
-# Validasi agar nilai integer sebelum digunakan
-if [[ "$SCAN_COUNT" =~ ^[0-9]+$ ]] && [ "$SCAN_COUNT" -gt 0 ] && [ "$DURATION" -gt 0 ]; then
+# Validasi agar nilai integer sebelum digunakan - pastikan tidak kosong
+if [[ -z "$SCAN_COUNT" || ! "$SCAN_COUNT" =~ ^[0-9]+$ ]]; then
+    SCAN_COUNT=0
+fi
+
+# Hitung throughput dengan validasi
+if [ "$DURATION" -gt 0 ] && [ "$SCAN_COUNT" -gt 0 ]; then
     THROUGHPUT=$((SCAN_COUNT * 1000 / DURATION))
 else
     THROUGHPUT=0
@@ -87,24 +92,28 @@ echo "   Duration: ${DURATION}ms, Scanned entries: $SCAN_COUNT"
 # Test 3: SCAN with column family filter
 echo "🔍 Test 3: SCAN with column family filter"
 START_TIME=$(date +%s%3N)
-echo "scan 'soalUjian', {COLUMNS => ['main:'], LIMIT => $SCALE}" | hbase shell > /tmp/hbase_filter_output.txt 2>/dev/null
+
+echo "scan 'soalUjian', {COLUMNS => ['main'], LIMIT => 100}" | hbase shell > /tmp/hbase_filter_output.txt 2>/dev/null
+
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))
 
-# Hitung jumlah baris hasil scan
+# Hitung filtered results dengan validasi
 FILTER_COUNT=$(grep -E '^\s*ROW\s*' /tmp/hbase_filter_output.txt | wc -l | tr -d ' ')
 
-# Validasi angka sebelum digunakan
-if [[ "$FILTER_COUNT" =~ ^[0-9]+$ ]] && [ "$FILTER_COUNT" -gt 0 ] && [ "$DURATION" -gt 0 ]; then
+# Validasi untuk mencegah error integer expression
+if [[ -z "$FILTER_COUNT" || ! "$FILTER_COUNT" =~ ^[0-9]+$ ]]; then
+    FILTER_COUNT=0
+fi
+
+if [ "$DURATION" -gt 0 ] && [ "$FILTER_COUNT" -gt 0 ]; then
     THROUGHPUT=$((FILTER_COUNT * 1000 / DURATION))
 else
     THROUGHPUT=0
 fi
 
-# Tulis hasil
-echo "$TIMESTAMP,$SCALE,2,scan_filtered,hbase,$DURATION,$FILTER_COUNT,$THROUGHPUT,column_family_filter" >> "$RESULTS_FILE"
+echo "$TIMESTAMP,$SCALE,2,scan_filtered,hbase,$DURATION,$FILTER_COUNT,$THROUGHPUT,column_family_filter" >> $RESULTS_FILE
 echo "   Duration: ${DURATION}ms, Filtered columns: $FILTER_COUNT"
-
 
 # Test 4: GET specific record
 echo "🔍 Test 4: GET specific record by ID"
