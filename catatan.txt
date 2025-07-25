@@ -1,0 +1,102 @@
+🔍 ANALISIS: Mengapa PostgreSQL Lebih Unggul dari HBase
+Berdasarkan hasil benchmark Anda, PostgreSQL menang 17-0 dengan kecepatan rata-rata 98.9% lebih cepat. Berikut analisis penyebabnya:
+
+📊 FAKTOR UTAMA KEUNGGULAN POSTGRESQL:
+1. 🎯 VOLUME DATA YANG DITEST
+Code
+Scale: 100 → 1000 → 10000 → 100000 records
+❌ HBase Disadvantage:
+
+HBase dirancang untuk Big Data (jutaan-milyaran records)
+Pada skala kecil (≤100K), overhead HBase sangat besar
+Column family setup + region management = overhead berlebihan
+✅ PostgreSQL Advantage:
+
+Optimal untuk skala small-to-medium (≤10M records)
+Row-based storage efisien untuk relational queries
+Memory caching sangat efektif di skala ini
+2. 🔄 JENIS OPERASI YANG DITEST
+❌ HBase Weakness pada operasi ini:
+
+COUNT Operations:
+bash
+PostgreSQL: 52ms vs HBase: 5851ms (112x faster)
+HBase COUNT = full table scan di distributed system
+PostgreSQL COUNT = optimized dengan statistics + indexes
+CRUD Operations:
+bash
+PostgreSQL: 52ms vs HBase: 5898ms (113x faster)  
+HBase CRUD = network calls ke region servers
+PostgreSQL CRUD = local disk operations
+JOIN Operations:
+bash
+PostgreSQL: 53ms vs HBase: N/A
+HBase tidak punya native JOIN - harus manual coding
+PostgreSQL JOIN = optimized relational engine
+3. 🚫 TIDAK ADA JOIN di HBase Tests
+Dari hasil Anda, HBase memang TIDAK pakai JOIN karena:
+
+bash
+# PostgreSQL Query:
+SELECT s.*, k.namaKelas, m.namaMapel 
+FROM soalUjian s 
+JOIN kelas k ON s.idKelas = k.idKelas 
+JOIN mapel m ON s.idMapel = m.idMapel;
+
+# HBase Query:
+scan 'soalUjian', {COLUMNS => ['main:', 'refs:']}
+# Tidak ada JOIN - data denormalized dalam column families
+✅ PostgreSQL JOIN advantage:
+
+Native relational joins dengan query optimizer
+Index-based lookups untuk foreign keys
+Memory-efficient hash/merge joins
+❌ HBase "JOIN" disadvantage:
+
+Harus manual application-level joins
+Multiple round trips ke cluster
+No query optimization
+🎯 KAPAN HBASE AKAN LEBIH UNGGUL:
+1. 📈 BIG DATA SCALE:
+Code
+Scale: 10M+ → 100M+ → 1B+ records
+HBase linear scalability vs PostgreSQL bottleneck
+Distributed processing vs single-node limitation
+2. 🔥 HIGH WRITE THROUGHPUT:
+Code
+Concurrent writes: 10K+ writes/second
+HBase auto-sharding vs PostgreSQL lock contention
+Write-ahead logging distributed vs centralized
+3. 🗂️ SCHEMA-LESS DATA:
+Code
+Dynamic columns, varying structures
+HBase flexible schema vs PostgreSQL rigid schema
+Column family evolution vs ALTER TABLE overhead
+4. 📡 SIMPLE KEY-VALUE Operations:
+Code
+get(key), put(key,value), scan(startKey, endKey)
+HBase optimized untuk single-row operations
+No JOIN overhead - data sudah denormalized
+📋 SUMMARY TABLE: PostgreSQL vs HBase
+Aspect	PostgreSQL Wins	HBase Wins
+Scale	< 10M records	> 10M records
+Query Type	JOIN, COUNT, complex SQL	Simple GET/PUT, SCAN
+Data Model	Normalized, relational	Denormalized, wide columns
+Consistency	ACID transactions	Eventual consistency
+Setup Complexity	Single node, simple	Distributed cluster, complex
+Operation Latency	Low (local)	Higher (network)
+Scalability	Vertical	Horizontal
+🎯 KESIMPULAN:
+PostgreSQL unggul di benchmark Anda karena:
+
+Scale yang ditest (≤100K) = PostgreSQL sweet spot
+Query complexity (JOIN, COUNT) = PostgreSQL strength
+Single-node efficiency vs distributed overhead
+TIDAK ada JOIN di HBase - memang tidak bisa native JOIN
+HBase akan unggul jika:
+
+Scale 10M+ records
+Query simple key-value operations
+Workload write-heavy dengan high concurrency
+Data schema-less dan terus berubah
+Untuk thesis Anda: Bandingkan juga di scale 10M+ records untuk melihat titik balik performa!

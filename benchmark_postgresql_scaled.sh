@@ -44,9 +44,9 @@ COUNT_RESULT=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELEC
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))
 THROUGHPUT=$((COUNT_RESULT * 1000 / DURATION))
-
 echo "$TIMESTAMP,$SCALE,2,count_all,postgresql,$DURATION,$COUNT_RESULT,$THROUGHPUT,full_table_count" >> $RESULTS_FILE
 echo "   Duration: ${DURATION}ms, Records: $COUNT_RESULT"
+
 # Test 2: SELECT all records
 echo "🔍 Test 2: SELECT all records"
 START_TIME=$(date +%s%3N)

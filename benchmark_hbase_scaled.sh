@@ -1,4 +1,3 @@
-  GNU nano 7.2                                                              benchmark_hbase_scaled.sh
 #!/bin/bash
 
 SCALE=$1
@@ -25,7 +24,13 @@ echo "📦 Loading test data into HBase..."
 echo "⏳ This may take a while for scale $SCALE..."
 
 # Load data with timeout protection
-timeout 300 hbase shell "soal_hbase_${SCALE}.hbase" > /dev/null 2>&1 &
+DATA_DIR="$BASE_DIR/test-data-scaled"
+HBASE_FILE="$DATA_DIR/soal_hbase_${SCALE}.hbase"
+if [ -f "$HBASE_FILE" ]; then
+    timeout 1000 hbase shell "$HBASE_FILE" > /dev/null 2>&1 &
+else
+    echo "⚠️  HBase data file not found: $HBASE_FILE"
+fi
 LOAD_PID=$!
 
 # Wait for load to complete or timeout
@@ -34,7 +39,7 @@ LOAD_RESULT=$?
 
 if [ $LOAD_RESULT -ne 0 ]; then
     echo "⚠️  HBase data load timed out or failed for scale $SCALE, skipping tests"
-    return 1
+    exit 0
 fi
 
 echo "✅ HBase data loaded successfully"
@@ -57,14 +62,27 @@ echo "   Duration: ${DURATION}ms, Records: $HBASE_COUNT"
 # Test 2: SCAN all records (limited to avoid timeout)
 echo "🔍 Test 2: SCAN all records"
 START_TIME=$(date +%s%3N)
+
+# Jalankan scan dan simpan output
 echo "scan 'soalUjian', {LIMIT => $SCALE}" | hbase shell > /tmp/hbase_scan_output.txt 2>/dev/null
+
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))
-SCAN_COUNT=$(grep -c "column=" /tmp/hbase_scan_output.txt || echo "0")
-THROUGHPUT=$((SCAN_COUNT * 1000 / DURATION))
 
-echo "$TIMESTAMP,$SCALE,2,scan_all,hbase,$DURATION,$SCAN_COUNT,$THROUGHPUT,full_table_scan" >> $RESULTS_FILE
+# Hitung jumlah baris hasil scan berdasarkan baris yang diawali 'ROW'
+SCAN_COUNT=$(grep -E '^\s*ROW\s*' /tmp/hbase_scan_output.txt | wc -l | tr -d ' ')
+
+# Validasi agar nilai integer sebelum digunakan
+if [[ "$SCAN_COUNT" =~ ^[0-9]+$ ]] && [ "$SCAN_COUNT" -gt 0 ] && [ "$DURATION" -gt 0 ]; then
+    THROUGHPUT=$((SCAN_COUNT * 1000 / DURATION))
+else
+    THROUGHPUT=0
+fi
+
+# Tulis hasil ke file CSV dan tampilkan ke layar
+echo "$TIMESTAMP,$SCALE,2,scan_all,hbase,$DURATION,$SCAN_COUNT,$THROUGHPUT,full_table_scan" >> "$RESULTS_FILE"
 echo "   Duration: ${DURATION}ms, Scanned entries: $SCAN_COUNT"
+
 
 # Test 3: SCAN with column family filter
 echo "🔍 Test 3: SCAN with column family filter"
@@ -72,11 +90,21 @@ START_TIME=$(date +%s%3N)
 echo "scan 'soalUjian', {COLUMNS => ['main:'], LIMIT => $SCALE}" | hbase shell > /tmp/hbase_filter_output.txt 2>/dev/null
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))
-FILTER_COUNT=$(grep -c "column=main:" /tmp/hbase_filter_output.txt || echo "0")
-THROUGHPUT=$((FILTER_COUNT * 1000 / DURATION))
 
-echo "$TIMESTAMP,$SCALE,2,scan_filtered,hbase,$DURATION,$FILTER_COUNT,$THROUGHPUT,column_family_filter" >> $RESULTS_FILE
+# Hitung jumlah baris hasil scan
+FILTER_COUNT=$(grep -E '^\s*ROW\s*' /tmp/hbase_filter_output.txt | wc -l | tr -d ' ')
+
+# Validasi angka sebelum digunakan
+if [[ "$FILTER_COUNT" =~ ^[0-9]+$ ]] && [ "$FILTER_COUNT" -gt 0 ] && [ "$DURATION" -gt 0 ]; then
+    THROUGHPUT=$((FILTER_COUNT * 1000 / DURATION))
+else
+    THROUGHPUT=0
+fi
+
+# Tulis hasil
+echo "$TIMESTAMP,$SCALE,2,scan_filtered,hbase,$DURATION,$FILTER_COUNT,$THROUGHPUT,column_family_filter" >> "$RESULTS_FILE"
 echo "   Duration: ${DURATION}ms, Filtered columns: $FILTER_COUNT"
+
 
 # Test 4: GET specific record
 echo "🔍 Test 4: GET specific record by ID"
@@ -111,4 +139,3 @@ echo "$TIMESTAMP,$SCALE,2,multiple_gets,hbase,$DURATION,$RECORD_COUNT,$THROUGHPU
 echo "   Duration: ${DURATION}ms for $RECORD_COUNT records"
 
 echo "✅ HBase benchmarks completed for scale $SCALE"
-

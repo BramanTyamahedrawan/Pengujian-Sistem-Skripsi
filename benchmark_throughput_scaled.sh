@@ -39,14 +39,19 @@ EXISTING_KONSENTRASI=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -
 echo "📈 PHASE 5: Throughput Testing"
 
 # Determine batch size based on scale
+# Determine batch size based on scale
 if [ $SCALE -le 100 ]; then
     BATCH_SIZE=10
 elif [ $SCALE -le 1000 ]; then
     BATCH_SIZE=50
 elif [ $SCALE -le 10000 ]; then
     BATCH_SIZE=100
-else
+elif [ $SCALE -le 100000 ]; then
     BATCH_SIZE=200
+elif [ $SCALE -le 1000000 ]; then
+    BATCH_SIZE=500
+else
+    BATCH_SIZE=1000
 fi
 
 echo "Using batch size: $BATCH_SIZE for scale $SCALE"
@@ -120,7 +125,6 @@ echo "$TIMESTAMP,$SCALE,5,bulk_delete,postgresql,$DURATION,$BATCH_SIZE,$THROUGHP
 echo "    Bulk DELETE: ${DURATION}ms, Throughput: ${THROUGHPUT} rps"
 
 echo "🔍 HBase Throughput Tests:"
-
 # Test 1: Bulk PUT throughput
 echo "  Bulk PUT throughput ($BATCH_SIZE records)..."
 START_TIME=$(date +%s%3N)
@@ -182,7 +186,11 @@ echo "scan 'soalUjian', {COLUMNS => ['main:', 'refs:'], FILTER => \"SingleColumn
 END_TIME=$(date +%s%3N)
 DURATION=$((END_TIME - START_TIME))
 SCAN_COUNT=$(grep -c "column=" /tmp/bulk_scan_result.txt || echo "0")
-THROUGHPUT=$((SCAN_COUNT * 1000 / DURATION))
+if [ "$SCAN_COUNT" -gt 0 ] && [ "$DURATION" -gt 0 ]; then
+    THROUGHPUT=$((SCAN_COUNT * 1000 / DURATION))
+else
+    THROUGHPUT=0
+fi
 echo "$TIMESTAMP,$SCALE,5,bulk_scan,hbase,$DURATION,$SCAN_COUNT,$THROUGHPUT,${SCAN_COUNT}_entries_filtered_scan" >> $RESULTS_FILE
 echo "    Bulk SCAN: ${DURATION}ms, Throughput: ${THROUGHPUT} rps"
 
@@ -206,4 +214,3 @@ echo "$TIMESTAMP,$SCALE,5,bulk_delete,hbase,$DURATION,$DELETE_COUNT,$THROUGHPUT,
 echo "    Bulk DELETE: ${DURATION}ms, Throughput: ${THROUGHPUT} rps"
 
 echo "✅ Throughput benchmarks completed for scale $SCALE"
-

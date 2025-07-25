@@ -1,4 +1,3 @@
-  GNU nano 7.2                                                              benchmark_crud_scaled.sh
 #!/bin/bash
 
 SCALE=$1
@@ -37,7 +36,8 @@ echo "📝 PHASE 3: CRUD Operations"
 
 # Get existing foreign key values for PostgreSQL
 EXISTING_TAKSONOMI=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idTaksonomi FROM taksonomi ORDER BY RANDOM() LIMIT 1;" 2>/dev/null | tr -d ' ')
-EXISTING_KONSENTRASI=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idKonsentrasiSekolah FROM konsentrasiKeahlianSekolah ORDER BY RANDOM() LIMIT 1;" >
+EXISTING_KONSENTRASI=$(psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "SELECT idKonsentrasiSekolah FROM konsentrasiKeahlianSekolah ORDER BY RANDOM() LIMIT 1;" > T 1;" 2>/dev/null | tr -d ' ')
+
 
 echo "🔍 PostgreSQL CRUD Tests:"
 
@@ -46,6 +46,7 @@ echo "  CREATE (INSERT) test..."
 TEST_ID=$(generate_uuid)
 TEST_QUESTION="Test CRUD question for scale $SCALE"
 START_TIME=$(date +%s%3N)
+
 psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "
 INSERT INTO soalUjian (
     idSoalUjian, namaUjian, pertanyaan, jenisSoal, bobot,
@@ -182,4 +183,3 @@ echo "$TIMESTAMP,$SCALE,3,crud_delete,hbase,$DURATION,1,$THROUGHPUT,single_recor
 echo "    DELETE Duration: ${DURATION}ms"
 
 echo "✅ CRUD benchmarks completed for scale $SCALE"
-

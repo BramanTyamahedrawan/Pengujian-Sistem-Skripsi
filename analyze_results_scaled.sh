@@ -1,3 +1,4 @@
+  GNU nano 7.2                                                              analyze_results_scaled.sh
 #!/bin/bash
 
 echo "=== SCALED BENCHMARK RESULTS ANALYSIS ==="
@@ -36,7 +37,8 @@ BEGIN {
     print ""
 
     # Initialize arrays
-    scales[1] = 100; scales[2] = 1000; scales[3] = 10000; scales[4] = 100000
+    # Initialize arrays
+    scales[1] = 100; scales[2] = 1000; scales[3] = 10000; scales[4] = 100000; scales[5] = 1000000; scales[6] = 10000000
     phases[1] = "Data Generation"; phases[2] = "Read Performance"; phases[3] = "CRUD Operations"
     phases[4] = "Latency Testing"; phases[5] = "Throughput Testing"
 }
@@ -47,7 +49,6 @@ NR > 1 {
     operation = $4
     database = $5
     duration = $6
-    records = $7
     records = $7
     throughput = $8
     notes = $9
@@ -137,7 +138,6 @@ END {
         print sprintf("%-8s | %-15s | %-12s | %-10s | %s", "Scale", "Operation", "PostgreSQL", "HBase", "Winner")
         print sprintf("%-8s | %-15s | %-12s | %-10s | %s", "--------", "---------------", "------------", "----------", "--------")
 
-
         for (scale in all_scales) {
             for (key in psql_times) {
                 if (key in hbase_times) {
@@ -195,6 +195,7 @@ END {
         if (key in hbase_times) {
             psql_time = psql_times[key]
             hbase_time = hbase_times[key]
+
 
             if (psql_time > 0 && hbase_time > 0) {
                 total_psql_time += psql_time
@@ -298,4 +299,3 @@ echo "======================================================"
 echo "📊 5 phases tested across 4 different scales"
 echo "🎯 PostgreSQL vs HBase comparison with proper foreign keys and column families"
 echo "📈 Performance, latency, and throughput analysis included"
-

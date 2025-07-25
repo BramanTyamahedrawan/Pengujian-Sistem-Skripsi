@@ -47,8 +47,13 @@ for i in $(seq 1 $OPERATIONS); do
         TOTAL_DURATION=$((TOTAL_DURATION + DURATION))
     fi
 done
+
 AVG_DURATION=$((TOTAL_DURATION / OPERATIONS))
-AVG_THROUGHPUT=$((1000 / AVG_DURATION))
+if [ "$AVG_DURATION" -gt 0 ]; then
+    AVG_THROUGHPUT=$((1000 / AVG_DURATION))
+else
+    AVG_THROUGHPUT=0
+fi
 echo "$TIMESTAMP,$SCALE,4,latency_single_select,postgresql,$AVG_DURATION,$OPERATIONS,$AVG_THROUGHPUT,average_${OPERATIONS}_single_selects" >> $RESULTS_FILE
 echo "    Average SELECT latency: ${AVG_DURATION}ms"
 
@@ -75,7 +80,11 @@ for i in $(seq 1 $OPERATIONS); do
 done
 
 AVG_DURATION=$((TOTAL_DURATION / OPERATIONS))
-AVG_THROUGHPUT=$((1000 / AVG_DURATION))
+if [ "$AVG_DURATION" -gt 0 ]; then
+    AVG_THROUGHPUT=$((1000 / AVG_DURATION))
+else
+    AVG_THROUGHPUT=0
+fi
 echo "$TIMESTAMP,$SCALE,4,latency_join_query,postgresql,$AVG_DURATION,$OPERATIONS,$AVG_THROUGHPUT,average_${OPERATIONS}_join_queries" >> $RESULTS_FILE
 echo "    Average JOIN latency: ${AVG_DURATION}ms"
 
@@ -94,7 +103,11 @@ for i in $(seq 1 $OPERATIONS); do
 done
 
 AVG_DURATION=$((TOTAL_DURATION / OPERATIONS))
-AVG_THROUGHPUT=$((1000 / AVG_DURATION))
+if [ "$AVG_DURATION" -gt 0 ]; then
+    AVG_THROUGHPUT=$((1000 / AVG_DURATION))
+else
+    AVG_THROUGHPUT=0
+fi
 echo "$TIMESTAMP,$SCALE,4,latency_json_query,postgresql,$AVG_DURATION,$OPERATIONS,$AVG_THROUGHPUT,average_${OPERATIONS}_json_queries" >> $RESULTS_FILE
 echo "    Average JSON query latency: ${AVG_DURATION}ms"
 
@@ -119,10 +132,13 @@ for i in $(seq 0 $((OPERATIONS-1))); do
 done
 
 AVG_DURATION=$((TOTAL_DURATION / OPERATIONS))
-AVG_THROUGHPUT=$((1000 / AVG_DURATION))
+if [ "$AVG_DURATION" -gt 0 ]; then
+    AVG_THROUGHPUT=$((1000 / AVG_DURATION))
+else
+    AVG_THROUGHPUT=0
+fi
 echo "$TIMESTAMP,$SCALE,4,latency_single_get,hbase,$AVG_DURATION,$OPERATIONS,$AVG_THROUGHPUT,average_${OPERATIONS}_single_gets" >> $RESULTS_FILE
 echo "    Average GET latency: ${AVG_DURATION}ms"
-
 
 # Test 2: Column family specific GET latency
 echo "  Column family GET latency (10 operations)..."
@@ -139,7 +155,11 @@ for i in $(seq 0 $((OPERATIONS-1))); do
 done
 
 AVG_DURATION=$((TOTAL_DURATION / OPERATIONS))
-AVG_THROUGHPUT=$((1000 / AVG_DURATION))
+if [ "$AVG_DURATION" -gt 0 ]; then
+    AVG_THROUGHPUT=$((1000 / AVG_DURATION))
+else
+    AVG_THROUGHPUT=0
+fi
 echo "$TIMESTAMP,$SCALE,4,latency_cf_get,hbase,$AVG_DURATION,$OPERATIONS,$AVG_THROUGHPUT,average_${OPERATIONS}_cf_gets" >> $RESULTS_FILE
 echo "    Average CF GET latency: ${AVG_DURATION}ms"
 
@@ -156,7 +176,11 @@ for i in $(seq 1 $OPERATIONS); do
 done
 
 AVG_DURATION=$((TOTAL_DURATION / OPERATIONS))
-AVG_THROUGHPUT=$((1000 / AVG_DURATION))
+if [ "$AVG_DURATION" -gt 0 ]; then
+    AVG_THROUGHPUT=$((1000 / AVG_DURATION))
+else
+    AVG_THROUGHPUT=0
+fi
 echo "$TIMESTAMP,$SCALE,4,latency_scan_filter,hbase,$AVG_DURATION,$OPERATIONS,$AVG_THROUGHPUT,average_${OPERATIONS}_scan_filters" >> $RESULTS_FILE
 echo "    Average SCAN filter latency: ${AVG_DURATION}ms"
 

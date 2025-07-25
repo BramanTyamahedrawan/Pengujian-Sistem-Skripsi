@@ -1,4 +1,3 @@
-  GNU nano 7.2                                                              run_complete_benchmark.sh
 #!/bin/bash
 
 echo "🚀 STARTING COMPREHENSIVE DATABASE BENCHMARK WITH SCALES"
@@ -13,7 +12,7 @@ echo "  3. 📝 CRUD Operations (INSERT/PUT, UPDATE, DELETE)"
 echo "  4. ⚡ Latency Testing (single record operations)"
 echo "  5. 📈 Throughput Testing (bulk operations)"
 echo ""
-echo "🎯 Scales: 100 → 1000 → 10000 → 100000 records"
+echo "🎯 Scales: 100 → 1000 → 10000 → 100000  → 1000000  → 10000000 records"
 
 # Make all scripts executable
 chmod +x setup_benchmark_scaled.sh
@@ -34,7 +33,7 @@ echo "🔧 Setting up benchmark environment..."
 mkdir -p logs
 
 # Run all benchmarks for each scale
-for scale in 100 1000 10000 100000; do
+for scale in 100 1000 10000 100000 1000000 10000000; do
     echo ""
     echo "🎯 TESTING SCALE: $scale RECORDS"
     echo "================================"
@@ -85,4 +84,3 @@ echo "📋 Logs: logs/"
 echo ""
 echo "⏰ Total benchmark completed at: $(date '+%Y-%m-%d %H:%M:%S UTC')"
 echo "👤 Benchmark executed by: BramMahendrawan"
-
