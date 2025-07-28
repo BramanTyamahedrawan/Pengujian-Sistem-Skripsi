@@ -135,11 +135,16 @@ START_TIME=$(date +%s%3N)
 
 # Calculate batch size for optimal performance
 BATCH_SIZE=1000
-if [ "$SCALE" -gt 100000 ]; then
-    BATCH_SIZE=5000
+if [ "$SCALE" -gt 10000000 ]; then
+    BATCH_SIZE=100000
+elif [ "$SCALE" -gt 1000000 ]; then
+    BATCH_SIZE=50000
+elif [ "$SCALE" -gt 100000 ]; then
+    BATCH_SIZE=20000
 elif [ "$SCALE" -gt 10000 ]; then
     BATCH_SIZE=2000
 fi
+
 
 # Generate PostgreSQL data in batches
 {

@@ -42,9 +42,7 @@ for scale in 100 1000 10000 100000 1000000 10000000; do
     # Generate test data for this scale
     echo ""
     echo "📝 Phase 1: Generating test data..."
-    cd test-data-scaled
-    ../generate_test_data.sh $scale 2>&1 | tee "../logs/generate_${scale}_$(date +%Y%m%d_%H%M%S).log"
-    cd ..
+    ./generate_test_data.sh $scale 2>&1 | tee "logs/generate_${scale}_$(date +%Y%m%d_%H%M%S).log"  
 
     # Run 5-phase benchmarks
     echo ""
