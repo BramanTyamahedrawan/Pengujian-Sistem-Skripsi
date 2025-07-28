@@ -1,46 +1,85 @@
-  GNU nano 7.2                                                              analyze_results_scaled.sh
 #!/bin/bash
 
-echo "=== SCALED BENCHMARK RESULTS ANALYSIS ==="
-echo "Current Date and Time (UTC): $(date '+%Y-%m-%d %H:%M:%S')"
-echo "Current User's Login: BramMahendrawan"
+# Enhanced logging with colors and icons
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m' # No Color
+
+# Function for colored output with icons
+log_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
+log_success() { echo -e "${GREEN}✅ $1${NC}"; }
+log_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
+log_error() { echo -e "${RED}❌ $1${NC}"; }
+log_header() { echo -e "${PURPLE}📊 $1${NC}"; }
+log_subheader() { echo -e "${CYAN}📋 $1${NC}"; }
+
+clear
+echo -e "${WHITE}"
+cat << "EOF"
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                  🚀 ENHANCED SCALED BENCHMARK ANALYSIS 🚀                   ║
+║                        PostgreSQL vs HBase Performance                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+EOF
+echo -e "${NC}"
+
+log_info "Analysis Started: $(date '+%Y-%m-%d %H:%M:%S UTC')"
+log_info "Analyzing User: BramMahendrawan"
+log_info "System: $(uname -s) $(uname -r)"
 
 # Use environment variables with fallbacks
 RESULTS_FILE="${BENCHMARK_RESULTS_FILE:-$(pwd)/benchmark-results/benchmark_results_scaled.csv}"
 BASE_DIR="${BENCHMARK_BASE_DIR:-$(pwd)}"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+ANALYSIS_DIR="$(dirname "$RESULTS_FILE")/analysis"
 
-# Ensure results file and directory exist
-mkdir -p "$(dirname "$RESULTS_FILE")"
-if [ ! -f "$RESULTS_FILE" ]; then
-    echo "timestamp,scale,phase,operation,database,duration_ms,records_affected,throughput_rps,notes" > "$RESULTS_FILE"
-fi
+# Create analysis directory
+mkdir -p "$ANALYSIS_DIR"
 
+# Ensure results file exists
 if [ ! -f "$RESULTS_FILE" ]; then
-    echo "❌ Results file not found!"
+    log_error "Results file not found: $RESULTS_FILE"
+    log_warning "Please run benchmark tests first!"
     exit 1
 fi
 
-echo ""
-echo "📊 RAW RESULTS:"
-echo "=============="
-cat "$RESULTS_FILE"
+# Check file size and record count
+FILE_SIZE=$(du -h "$RESULTS_FILE" | cut -f1)
+RECORD_COUNT=$(tail -n +2 "$RESULTS_FILE" | wc -l)
+log_success "Results file loaded: $FILE_SIZE ($RECORD_COUNT records)"
 
 echo ""
-echo "📈 COMPREHENSIVE PERFORMANCE ANALYSIS:"
-echo "======================================"
+log_header "RAW BENCHMARK RESULTS"
+echo "══════════════════════════════════════════════════════════════════════════════"
+cat "$RESULTS_FILE" | column -t -s ','
+echo ""
 
-# Detailed analysis with awk
-awk -F',' '
+log_header "COMPREHENSIVE PERFORMANCE ANALYSIS"
+echo "══════════════════════════════════════════════════════════════════════════════"
+
+# Enhanced analysis with awk
+awk -F',' -v GREEN="$GREEN" -v RED="$RED" -v YELLOW="$YELLOW" -v BLUE="$BLUE" -v PURPLE="$PURPLE" -v CYAN="$CYAN" -v WHITE="$WHITE" -v NC="$NC" '
 BEGIN {
-    print "=== 5-PHASE SCALED BENCHMARK ANALYSIS ==="
+    printf "%s🎯 MULTI-SCALE BENCHMARK ANALYSIS REPORT%s\n", WHITE, NC
+    printf "%s================================================================%s\n", WHITE, NC
     print ""
 
-    # Initialize arrays
-    # Initialize arrays
+    # Initialize data structures
     scales[1] = 100; scales[2] = 1000; scales[3] = 10000; scales[4] = 100000; scales[5] = 1000000; scales[6] = 10000000
-    phases[1] = "Data Generation"; phases[2] = "Read Performance"; phases[3] = "CRUD Operations"
-    phases[4] = "Latency Testing"; phases[5] = "Throughput Testing"
+    phases[1] = "📝 Data Generation"; phases[2] = "🔍 Read Performance"; phases[3] = "✏️ CRUD Operations"
+    phases[4] = "⚡ Latency Testing"; phases[5] = "🚀 Throughput Testing"
+    
+    # Performance metrics
+    total_tests = 0
+    fastest_operation = ""
+    fastest_time = 999999
+    slowest_operation = ""
+    slowest_time = 0
 }
 NR > 1 {
     timestamp = $1
@@ -52,6 +91,20 @@ NR > 1 {
     records = $7
     throughput = $8
     notes = $9
+    
+    total_tests++
+    
+    # Track fastest and slowest operations
+    if (duration > 0) {
+        if (duration < fastest_time) {
+            fastest_time = duration
+            fastest_operation = database "_" operation "_" scale
+        }
+        if (duration > slowest_time) {
+            slowest_time = duration
+            slowest_operation = database "_" operation "_" scale
+        }
+    }
 
     # Store data for analysis
     key = scale "_" phase "_" operation
@@ -59,31 +112,53 @@ NR > 1 {
         psql_times[key] = duration
         psql_throughput[key] = throughput
         psql_records[key] = records
+        psql_notes[key] = notes
     } else if (database == "hbase") {
         hbase_times[key] = duration
         hbase_throughput[key] = throughput
         hbase_records[key] = records
+        hbase_notes[key] = notes
     }
 
-    # Track all operations per phase
-    phase_ops[phase "_" operation] = 1
+    # Track statistics
     all_scales[scale] = 1
     all_phases[phase] = 1
+    all_operations[operation] = 1
+    
+    # Database operation counts
+    db_ops[database]++
+    scale_ops[scale]++
+    phase_ops[phase]++
 }
 END {
-    # Scale-by-scale comparison
-    print "🎯 SCALE-BY-SCALE PERFORMANCE COMPARISON"
-    print "========================================"
+    # Quick Statistics Overview
+    printf "%s📊 BENCHMARK OVERVIEW%s\n", CYAN, NC
+    printf "%s══════════════════════════════════════════════════════════════════════════════%s\n", CYAN, NC
+    printf "🔢 Total Tests Executed: %d\n", total_tests
+    printf "🏢 Databases Tested: PostgreSQL, HBase\n"
+    printf "📈 Scales Tested: %d different scales\n", length(all_scales)
+    printf "🎯 Phases Analyzed: %d testing phases\n", length(all_phases)
+    printf "⚡ Fastest Operation: %s (%.2f ms)\n", fastest_operation, fastest_time
+    printf "🐌 Slowest Operation: %s (%.2f ms)\n", slowest_operation, slowest_time
+    print ""
+    
+    # Scale-by-scale detailed comparison
+    printf "%s🎯 SCALE-BY-SCALE PERFORMANCE COMPARISON%s\n", PURPLE, NC
+    printf "%s══════════════════════════════════════════════════════════════════════════════%s\n", PURPLE, NC
+
+    overall_psql_wins = 0
+    overall_hbase_wins = 0
+    overall_ties = 0
 
     for (scale in all_scales) {
-        print ""
-        print "📊 SCALE: " scale " RECORDS"
-        print "=================="
-        print sprintf("%-25s | %-12s | %-10s | %-10s | %s", "Operation", "PostgreSQL", "HBase", "Winner", "Advantage")
-        print sprintf("%-25s | %-12s | %-10s | %-10s | %s", "-------------------------", "------------", "----------", "----------", "-----------")
+        printf "\n%s📊 SCALE: %s RECORDS%s\n", BLUE, scale, NC
+        printf "%s────────────────────────────────────────────────────────────────────────────────%s\n", BLUE, NC
+        printf "%-30s | %-12s | %-10s | %-12s | %-10s | %s\n", "Operation", "PostgreSQL", "HBase", "Winner", "Advantage", "Performance Gap"
+        printf "%-30s | %-12s | %-10s | %-12s | %-10s | %s\n", "──────────────────────────────", "────────────", "──────────", "────────────", "──────────", "────────────────"
 
-        psql_wins = 0
-        hbase_wins = 0
+        scale_psql_wins = 0
+        scale_hbase_wins = 0
+        scale_ties = 0
 
         for (phase in all_phases) {
             for (key in psql_times) {
@@ -96,73 +171,53 @@ END {
 
                         if (psql_time > 0 && hbase_time > 0) {
                             if (psql_time < hbase_time) {
-                                winner = "PostgreSQL"
-                                advantage = sprintf("%.1fx", hbase_time / psql_time)
-                                psql_wins++
+                                winner = "🏆 PostgreSQL"
+                                advantage = sprintf("%.1fx faster", hbase_time / psql_time)
+                                gap = sprintf("%.1f%% better", ((hbase_time - psql_time) / hbase_time) * 100)
+                                scale_psql_wins++
+                                overall_psql_wins++
+                            } else if (hbase_time < psql_time) {
+                                winner = "🏆 HBase"
+                                advantage = sprintf("%.1fx faster", psql_time / hbase_time)
+                                gap = sprintf("%.1f%% better", ((psql_time - hbase_time) / psql_time) * 100)
+                                scale_hbase_wins++
+                                overall_hbase_wins++
                             } else {
-                                winner = "HBase"
-                                advantage = sprintf("%.1fx", psql_time / hbase_time)
-                                hbase_wins++
+                                winner = "🤝 Tie"
+                                advantage = "Equal"
+                                gap = "0% diff"
+                                scale_ties++
+                                overall_ties++
                             }
 
-                            print sprintf("%-25s | %8s ms | %6s ms | %-10s | %s", operation, psql_time, hbase_time, winner, advantage)
+                            printf "%-30s | %8s ms | %6s ms | %-12s | %-10s | %s\n", operation, psql_time, hbase_time, winner, advantage, gap
                         }
                     }
                 }
             }
         }
 
-        print ""
-        print "🏆 Scale " scale " Summary: PostgreSQL wins: " psql_wins ", HBase wins: " hbase_wins
-        if (psql_wins > hbase_wins) {
-            print "   Overall winner for scale " scale ": PostgreSQL"
-        } else if (hbase_wins > psql_wins) {
-            print "   Overall winner for scale " scale ": HBase"
+        printf "\n%s🏆 Scale %s Summary:%s\n", GREEN, scale, NC
+        printf "   PostgreSQL wins: %d 🏆 | HBase wins: %d 🏆 | Ties: %d 🤝\n", scale_psql_wins, scale_hbase_wins, scale_ties
+        
+        if (scale_psql_wins > scale_hbase_wins) {
+            printf "   %s✨ Overall scale winner: PostgreSQL%s\n", GREEN, NC
+        } else if (scale_hbase_wins > scale_psql_wins) {
+            printf "   %s✨ Overall scale winner: HBase%s\n", GREEN, NC
         } else {
-            print "   Scale " scale ": Tied performance"
+            printf "   %s🤝 Scale result: Balanced performance%s\n", YELLOW, NC
         }
     }
 
-    # Phase-by-phase analysis
-    print ""
-    print "🔍 PHASE-BY-PHASE ANALYSIS"
-    print "=========================="
+    # Advanced Performance Analytics
+    printf "\n%s📈 ADVANCED PERFORMANCE ANALYTICS%s\n", PURPLE, NC
+    printf "%s══════════════════════════════════════════════════════════════════════════════%s\n", PURPLE, NC
 
-    for (phase in all_phases) {
-        phase_name = phases[phase]
-        if (phase_name == "") phase_name = "Phase " phase
-
-        print ""
-        print "📋 " phase_name " (Phase " phase ")"
-        print "----------------------------------------"
-        print sprintf("%-8s | %-15s | %-12s | %-10s | %s", "Scale", "Operation", "PostgreSQL", "HBase", "Winner")
-        print sprintf("%-8s | %-15s | %-12s | %-10s | %s", "--------", "---------------", "------------", "----------", "--------")
-
-        for (scale in all_scales) {
-            for (key in psql_times) {
-                if (key in hbase_times) {
-                    split(key, parts, "_")
-                    if (parts[1] == scale && parts[2] == phase) {
-                        operation = parts[3]
-                        psql_time = psql_times[key]
-                        hbase_time = hbase_times[key]
-
-                        if (psql_time > 0 && hbase_time > 0) {
-                            winner = (psql_time < hbase_time) ? "PostgreSQL" : "HBase"
-                            print sprintf("%-8s | %-15s | %8s ms | %6s ms | %s", scale, operation, psql_time, hbase_time, winner)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    # Throughput analysis
-    print ""
-    print "📈 THROUGHPUT ANALYSIS (Records per Second)"
-    print "=========================================="
-    print sprintf("%-8s | %-20s | %-12s | %-10s | %s", "Scale", "Operation", "PostgreSQL", "HBase", "Winner")
-    print sprintf("%-8s | %-20s | %-12s | %-10s | %s", "--------", "--------------------", "------------", "----------", "--------")
+    # Throughput Analysis
+    printf "\n%s🚀 THROUGHPUT ANALYSIS (Operations per Second)%s\n", CYAN, NC
+    printf "%s────────────────────────────────────────────────────────────────────────────────%s\n", CYAN, NC
+    printf "%-12s | %-25s | %-15s | %-12s | %-12s | %s\n", "Scale", "Operation", "PostgreSQL", "HBase", "Winner", "Performance Ratio"
+    printf "%-12s | %-25s | %-15s | %-12s | %-12s | %s\n", "────────────", "─────────────────────────", "───────────────", "────────────", "────────────", "────────────────"
 
     for (scale in all_scales) {
         for (key in psql_throughput) {
@@ -174,128 +229,346 @@ END {
                     hbase_tps = hbase_throughput[key]
 
                     if (psql_tps > 0 && hbase_tps > 0) {
-                        winner = (psql_tps > hbase_tps) ? "PostgreSQL" : "HBase"
-                        print sprintf("%-8s | %-20s | %8s rps | %6s rps | %s", scale, operation, psql_tps, hbase_tps, winner)
+                        if (psql_tps > hbase_tps) {
+                            winner = "🏆 PostgreSQL"
+                            ratio = sprintf("%.2fx", psql_tps / hbase_tps)
+                        } else if (hbase_tps > psql_tps) {
+                            winner = "🏆 HBase"
+                            ratio = sprintf("%.2fx", hbase_tps / psql_tps)
+                        } else {
+                            winner = "🤝 Equal"
+                            ratio = "1.00x"
+                        }
+                        printf "%-12s | %-25s | %11s ops/s | %8s ops/s | %-12s | %s\n", scale, operation, psql_tps, hbase_tps, winner, ratio
                     }
                 }
             }
         }
     }
 
-    # Overall statistics
-    print ""
-    print "📊 OVERALL PERFORMANCE STATISTICS"
-    print "================================"
+    # Scalability Analysis
+    printf "\n%s📊 SCALABILITY ANALYSIS%s\n", PURPLE, NC
+    printf "%s────────────────────────────────────────────────────────────────────────────────%s\n", PURPLE, NC
+    
+    for (operation in all_operations) {
+        printf "\n%s🎯 Operation: %s%s\n", BLUE, operation, NC
+        printf "%-12s | %-15s | %-12s | %-15s | %s\n", "Scale", "PostgreSQL", "HBase", "Perf. Ratio", "Scalability Trend"
+        printf "%-12s | %-15s | %-12s | %-15s | %s\n", "────────────", "───────────────", "────────────", "───────────────", "─────────────────"
 
-    total_psql_time = 0; total_hbase_time = 0
-    total_psql_ops = 0; total_hbase_ops = 0
-    overall_psql_wins = 0; overall_hbase_wins = 0
-
-    for (key in psql_times) {
-        if (key in hbase_times) {
-            psql_time = psql_times[key]
-            hbase_time = hbase_times[key]
-
-
-            if (psql_time > 0 && hbase_time > 0) {
-                total_psql_time += psql_time
-                total_hbase_time += hbase_time
-                total_psql_ops++
-                total_hbase_ops++
-
-                if (psql_time < hbase_time) {
-                    overall_psql_wins++
-                } else {
-                    overall_hbase_wins++
+        prev_psql = 0
+        prev_hbase = 0
+        
+        for (scale in all_scales) {
+            for (phase in all_phases) {
+                key = scale "_" phase "_" operation
+                if (key in psql_times && key in hbase_times) {
+                    psql_time = psql_times[key]
+                    hbase_time = hbase_times[key]
+                    
+                    if (psql_time > 0 && hbase_time > 0) {
+                        ratio = sprintf("%.2f", psql_time / hbase_time)
+                        
+                        # Determine trend
+                        trend = ""
+                        if (prev_psql > 0 && prev_hbase > 0) {
+                            psql_change = (psql_time - prev_psql) / prev_psql * 100
+                            hbase_change = (hbase_time - prev_hbase) / prev_hbase * 100
+                            
+                            if (psql_change < hbase_change) {
+                                trend = "📈 PostgreSQL scales better"
+                            } else if (hbase_change < psql_change) {
+                                trend = "📈 HBase scales better"
+                            } else {
+                                trend = "📊 Similar scaling"
+                            }
+                        } else {
+                            trend = "📋 Baseline"
+                        }
+                        
+                        printf "%-12s | %11s ms | %8s ms | %13s | %s\n", scale, psql_time, hbase_time, ratio, trend
+                        
+                        prev_psql = psql_time
+                        prev_hbase = hbase_time
+                    }
                 }
             }
         }
     }
 
+    # Overall Performance Summary
+    printf "\n%s🏆 OVERALL PERFORMANCE SUMMARY%s\n", WHITE, NC
+    printf "%s══════════════════════════════════════════════════════════════════════════════%s\n", WHITE, NC
+
+    total_comparisons = overall_psql_wins + overall_hbase_wins + overall_ties
+    
+    if (total_comparisons > 0) {
+        psql_win_rate = (overall_psql_wins / total_comparisons) * 100
+        hbase_win_rate = (overall_hbase_wins / total_comparisons) * 100
+        tie_rate = (overall_ties / total_comparisons) * 100
+        
+        printf "📊 Total Performance Comparisons: %d\n", total_comparisons
+        printf "🏆 PostgreSQL Wins: %d (%.1f%%)\n", overall_psql_wins, psql_win_rate
+        printf "🏆 HBase Wins: %d (%.1f%%)\n", overall_hbase_wins, hbase_win_rate
+        printf "🤝 Tied Results: %d (%.1f%%)\n", overall_ties, tie_rate
+        printf "\n"
+        
+        if (overall_psql_wins > overall_hbase_wins) {
+            printf "%s🎉 ULTIMATE WINNER: PostgreSQL%s\n", GREEN, NC
+            printf "%s   Victory margin: %d operations%s\n", GREEN, overall_psql_wins - overall_hbase_wins, NC
+            printf "%s   Win rate advantage: %.1f%%%s\n", GREEN, psql_win_rate - hbase_win_rate, NC
+        } else if (overall_hbase_wins > overall_psql_wins) {
+            printf "%s🎉 ULTIMATE WINNER: HBase%s\n", GREEN, NC
+            printf "%s   Victory margin: %d operations%s\n", GREEN, overall_hbase_wins - overall_psql_wins, NC
+            printf "%s   Win rate advantage: %.1f%%%s\n", GREEN, hbase_win_rate - psql_win_rate, NC
+        } else {
+            printf "%s🤝 ULTIMATE RESULT: Perfectly Balanced Performance%s\n", YELLOW, NC
+            printf "%s   Both databases show equivalent capabilities%s\n", YELLOW, NC
+        }
+    }
+
+    # Performance Insights and Recommendations
+    printf "\n%s💡 PERFORMANCE INSIGHTS & RECOMMENDATIONS%s\n", CYAN, NC
+    printf "%s══════════════════════════════════════════════════════════════════════════════%s\n", CYAN, NC
+    
+    # Calculate average times for insights
+    total_psql_time = 0; total_hbase_time = 0
+    total_psql_ops = 0; total_hbase_ops = 0
+    
+    for (key in psql_times) {
+        if (key in hbase_times && psql_times[key] > 0 && hbase_times[key] > 0) {
+            total_psql_time += psql_times[key]
+            total_hbase_time += hbase_times[key]
+            total_psql_ops++
+            total_hbase_ops++
+        }
+    }
+    
     if (total_psql_ops > 0 && total_hbase_ops > 0) {
         avg_psql = total_psql_time / total_psql_ops
         avg_hbase = total_hbase_time / total_hbase_ops
-
-        print "Average PostgreSQL operation time: " sprintf("%.1f", avg_psql) "ms"
-        print "Average HBase operation time: " sprintf("%.1f", avg_hbase) "ms"
-        print ""
-        print "PostgreSQL wins: " overall_psql_wins " operations"
-        print "HBase wins: " overall_hbase_wins " operations"
-        print ""
-
-        if (overall_psql_wins > overall_hbase_wins) {
-            improvement = sprintf("%.1f", ((avg_hbase - avg_psql) / avg_hbase) * 100)
-            print "🏆 OVERALL WINNER: PostgreSQL"
-            print "   PostgreSQL is " improvement "% faster on average"
-        } else if (overall_hbase_wins > overall_psql_wins) {
-            improvement = sprintf("%.1f", ((avg_psql - avg_hbase) / avg_psql) * 100)
-            print "🏆 OVERALL WINNER: HBase"
-            print "   HBase is " improvement "% faster on average"
+        
+        printf "📊 Average PostgreSQL Response Time: %.1f ms\n", avg_psql
+        printf "📊 Average HBase Response Time: %.1f ms\n", avg_hbase
+        printf "📊 Performance Difference: %.1f ms (%.1f%%)\n", abs(avg_psql - avg_hbase), abs(avg_psql - avg_hbase) / ((avg_psql + avg_hbase) / 2) * 100
+        
+        printf "\n%s🎯 STRATEGIC RECOMMENDATIONS:%s\n", GREEN, NC
+        if (avg_psql < avg_hbase) {
+            printf "✅ PostgreSQL shows superior average performance\n"
+            printf "💡 Consider PostgreSQL for: Complex queries, ACID transactions, structured data\n"
+            printf "📈 PostgreSQL advantage: %.1f%% faster average response time\n", ((avg_hbase - avg_psql) / avg_hbase) * 100
         } else {
-            print "🤝 OVERALL RESULT: Tied performance"
+            printf "✅ HBase shows superior average performance\n"
+            printf "💡 Consider HBase for: Large-scale data, horizontal scaling, column-oriented storage\n"
+            printf "📈 HBase advantage: %.1f%% faster average response time\n", ((avg_psql - avg_hbase) / avg_psql) * 100
         }
     }
+}
 
-    print ""
-    print "📋 SCALABILITY ANALYSIS"
-    print "======================"
+function abs(x) { return x < 0 ? -x : x }
+' "$RESULTS_FILE"
 
-    # Analyze how performance changes with scale
-    for (operation in phase_ops) {
-        split(operation, op_parts, "_")
-        phase = op_parts[1]
-        op_name = op_parts[2]
-
-        print ""
-        print "Operation: " op_name " (Phase " phase ")"
-        print "Scale    | PostgreSQL | HBase     | PostgreSQL vs HBase"
-        print "---------|------------|-----------|--------------------"
-
-        for (scale in all_scales) {
-            key = scale "_" operation
-            if (key in psql_times && key in hbase_times) {
-                psql_time = psql_times[key]
-                hbase_time = hbase_times[key]
-                ratio = sprintf("%.2f", psql_time / hbase_time)
-                print sprintf("%-8s | %8s ms | %7s ms | %s", scale, psql_time, hbase_time, ratio)
-            }
-        }
-    }
-}' "$RESULTS_FILE"
-
+# Generate enhanced reports
 echo ""
-echo "💾 Detailed results saved in: $RESULTS_FILE"
-echo "📊 Total operations benchmarked: $(tail -n +2 "$RESULTS_FILE" | wc -l)"
+log_header "GENERATING ENHANCED ANALYSIS REPORTS"
+echo "══════════════════════════════════════════════════════════════════════════════"
 
-# Generate summary CSV
-SUMMARY_FILE="benchmark-results/benchmark_summary_$(date +%Y%m%d_%H%M%S).csv"
-echo "scale,database,avg_duration_ms,total_operations,win_count" > "$SUMMARY_FILE"
+# Create detailed summary CSV
+SUMMARY_FILE="$ANALYSIS_DIR/detailed_summary_$(date +%Y%m%d_%H%M%S).csv"
+log_info "Creating detailed summary CSV..."
+
+echo "timestamp,scale,database,operation,duration_ms,throughput_rps,records_affected,performance_category,notes" > "$SUMMARY_FILE"
+
+awk -F',' '
+NR > 1 {
+    timestamp = $1
+    scale = $2
+    phase = $3
+    operation = $4
+    database = $5
+    duration = $6
+    records = $7
+    throughput = $8
+    notes = $9
+    
+    # Categorize performance
+    if (duration <= 100) category = "Excellent"
+    else if (duration <= 500) category = "Good"
+    else if (duration <= 1000) category = "Average"
+    else if (duration <= 5000) category = "Poor"
+    else category = "Critical"
+    
+    print timestamp "," scale "," database "," operation "," duration "," throughput "," records "," category "," notes
+}' "$RESULTS_FILE" >> "$SUMMARY_FILE"
+
+log_success "Detailed summary created: $SUMMARY_FILE"
+
+# Create performance comparison matrix
+MATRIX_FILE="$ANALYSIS_DIR/performance_matrix_$(date +%Y%m%d_%H%M%S).csv"
+log_info "Creating performance comparison matrix..."
+
+echo "scale,operation,postgresql_ms,hbase_ms,winner,advantage_ratio,performance_gap_percent" > "$MATRIX_FILE"
 
 awk -F',' '
 NR > 1 {
     scale = $2
+    phase = $3
+    operation = $4
     database = $5
     duration = $6
-
-    scale_db = scale "_" database
-    total_time[scale_db] += duration
-    op_count[scale_db]++
+    
+    key = scale "_" phase "_" operation
+    if (database == "postgresql") {
+        psql_times[key] = duration
+    } else if (database == "hbase") {
+        hbase_times[key] = duration
+    }
 }
 END {
-    for (scale_db in total_time) {
-        split(scale_db, parts, "_")
-        scale = parts[1]
-        database = parts[2]
-        avg_duration = total_time[scale_db] / op_count[scale_db]
-        print scale "," database "," int(avg_duration) "," op_count[scale_db] ",0"
+    for (key in psql_times) {
+        if (key in hbase_times) {
+            split(key, parts, "_")
+            scale = parts[1]
+            operation = parts[2] "_" parts[3]
+            psql_time = psql_times[key]
+            hbase_time = hbase_times[key]
+            
+            if (psql_time > 0 && hbase_time > 0) {
+                if (psql_time < hbase_time) {
+                    winner = "PostgreSQL"
+                    ratio = hbase_time / psql_time
+                    gap = ((hbase_time - psql_time) / hbase_time) * 100
+                } else {
+                    winner = "HBase"
+                    ratio = psql_time / hbase_time
+                    gap = ((psql_time - hbase_time) / psql_time) * 100
+                }
+                
+                print scale "," operation "," psql_time "," hbase_time "," winner "," sprintf("%.2f", ratio) "," sprintf("%.1f", gap)
+            }
+        }
     }
-}' "$RESULTS_FILE" >> "$SUMMARY_FILE"
+}' "$RESULTS_FILE" >> "$MATRIX_FILE"
 
-echo "📈 Summary CSV created: $SUMMARY_FILE"
+log_success "Performance matrix created: $MATRIX_FILE"
+
+# Create scalability report
+SCALABILITY_FILE="$ANALYSIS_DIR/scalability_report_$(date +%Y%m%d_%H%M%S).csv"
+log_info "Creating scalability analysis report..."
+
+echo "operation,scale_100,scale_1000,scale_10000,scale_100000,scale_1000000,database,scalability_trend" > "$SCALABILITY_FILE"
+
+awk -F',' '
+NR > 1 {
+    operation = $4
+    database = $5
+    scale = $2
+    duration = $6
+    
+    key = operation "_" database
+    times[key "_" scale] = duration
+    ops[key] = 1
+    databases[database] = 1
+}
+END {
+    for (key in ops) {
+        split(key, parts, "_")
+        operation = parts[1]
+        database = parts[2]
+        
+        line = operation
+        trend = "stable"
+        prev_time = 0
+        
+        # Check each scale
+        scales[1] = 100; scales[2] = 1000; scales[3] = 10000; scales[4] = 100000; scales[5] = 1000000
+        
+        for (i = 1; i <= 5; i++) {
+            scale = scales[i]
+            time_key = key "_" scale
+            if (time_key in times) {
+                line = line "," times[time_key]
+                
+                # Determine trend
+                if (prev_time > 0) {
+                    growth = (times[time_key] - prev_time) / prev_time
+                    if (growth > 2) trend = "exponential"
+                    else if (growth > 1) trend = "high_growth"
+                    else if (growth > 0.5) trend = "moderate_growth"
+                    else if (growth > 0.1) trend = "linear"
+                    else trend = "excellent"
+                }
+                prev_time = times[time_key]
+            } else {
+                line = line ",N/A"
+            }
+        }
+        
+        line = line "," database "," trend
+        print line
+    }
+}' "$RESULTS_FILE" >> "$SCALABILITY_FILE"
+
+log_success "Scalability report created: $SCALABILITY_FILE"
+
+# Generate final statistics
+echo ""
+log_header "FINAL ANALYSIS STATISTICS"
+echo "══════════════════════════════════════════════════════════════════════════════"
+
+FINAL_STATS=$(awk -F',' '
+NR > 1 {
+    total_operations++
+    if ($5 == "postgresql") postgresql_ops++
+    else if ($5 == "hbase") hbase_ops++
+    
+    if ($6 > 0) {
+        total_duration += $6
+        if ($6 < min_time || min_time == 0) min_time = $6
+        if ($6 > max_time) max_time = $6
+    }
+    
+    if ($8 > 0) {
+        total_throughput += $8
+        if ($8 > max_throughput) max_throughput = $8
+    }
+}
+END {
+    avg_duration = total_duration / total_operations
+    avg_throughput = total_throughput / total_operations
+    
+    printf "📊 Total Operations: %d\n", total_operations
+    printf "🐘 PostgreSQL Operations: %d\n", postgresql_ops
+    printf "🏗️  HBase Operations: %d\n", hbase_ops
+    printf "⚡ Fastest Operation: %.1f ms\n", min_time
+    printf "🐌 Slowest Operation: %.1f ms\n", max_time
+    printf "📈 Average Duration: %.1f ms\n", avg_duration
+    printf "🚀 Average Throughput: %.1f ops/s\n", avg_throughput
+    printf "🏆 Peak Throughput: %.1f ops/s\n", max_throughput
+    printf "📁 Results File Size: %s\n", "'$(du -h "$RESULTS_FILE" | cut -f1)'"
+}' "$RESULTS_FILE")
+
+echo "$FINAL_STATS"
 
 echo ""
-echo "✅ COMPREHENSIVE SCALED BENCHMARK ANALYSIS COMPLETED!"
-echo "======================================================"
-echo "📊 5 phases tested across 4 different scales"
-echo "🎯 PostgreSQL vs HBase comparison with proper foreign keys and column families"
-echo "📈 Performance, latency, and throughput analysis included"
+log_success "All analysis reports generated in: $ANALYSIS_DIR"
+log_info "Files created:"
+echo "   📄 Detailed Summary: $(basename "$SUMMARY_FILE")"
+echo "   📊 Performance Matrix: $(basename "$MATRIX_FILE")"
+echo "   📈 Scalability Report: $(basename "$SCALABILITY_FILE")"
+
+echo ""
+echo -e "${WHITE}"
+cat << "EOF"
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    ✨ ANALYSIS COMPLETED SUCCESSFULLY ✨                    ║
+║                                                                              ║
+║  🎯 Comprehensive performance comparison completed                           ║
+║  📊 Multi-scale analysis with detailed insights                             ║
+║  📈 Scalability trends and recommendations provided                         ║
+║  💾 Enhanced reports saved for future reference                             ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+EOF
+echo -e "${NC}"
+
+log_success "Enhanced Scaled Benchmark Analysis Completed!"
+log_info "Analysis Duration: $(($(date +%s) - $(date -d "$TIMESTAMP" +%s))) seconds"
